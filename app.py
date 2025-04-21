@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
 
 # Data quality checks volgens DAMA
 
@@ -69,7 +68,6 @@ if uploaded_file:
             st.subheader(f"Resultaten voor {check_name}:")
             result = checks[check_name](df, columns)
 
-            chart_data = []
             for col, value in result.items():
                 kpi = user_kpis[check_name]
                 if isinstance(value, bool):
@@ -80,17 +78,3 @@ if uploaded_file:
                 else:
                     status = "✅ Geslaagd" if value >= kpi else "❌ Niet geslaagd"
                     st.write(f"Kolom **{col}**: {value:.2f}% (KPI: {kpi}%) - {status}")
-                    chart_data.append((col, value, kpi))
-
-            if chart_data:
-                st.write("### Visualisatie van resultaten")
-                labels, values, kpis = zip(*chart_data)
-                x = range(len(labels))
-                fig, ax = plt.subplots()
-                ax.bar(x, values, width=0.4, label='Gemeten kwaliteit', align='center')
-                ax.bar([i + 0.4 for i in x], kpis, width=0.4, label='KPI', align='center')
-                ax.set_xticks([i + 0.2 for i in x])
-                ax.set_xticklabels(labels, rotation=45)
-                ax.set_ylabel('%')
-                ax.legend()
-                st.pyplot(fig)
