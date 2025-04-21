@@ -39,7 +39,7 @@ def date_range_check(df, columns, start_date, end_date):
     results = {}
     for col in columns:
         try:
-            col_parsed = pd.to_datetime(df[col], errors='coerce')
+            col_parsed = pd.to_datetime(df[col], errors='coerce').dt.date
             in_range = col_parsed.between(start_date, end_date).sum()
             validity = (in_range / len(df[col])) * 100
             results[col] = validity
@@ -68,7 +68,9 @@ st.title("🛒 Data Quality Marketplace Demo")
 uploaded_file = st.file_uploader("Upload Excel-bestand", type=['xlsx'])
 
 if uploaded_file:
-    df = pd.read_excel(uploaded_file)
+    df = pd.read_excel(uploaded_file, parse_dates=True)
+    for col in df.select_dtypes(include=['datetime']).columns:
+        df[col] = df[col].dt.date
 
     st.write("### Preview van je dataset:")
     st.dataframe(df.head())
