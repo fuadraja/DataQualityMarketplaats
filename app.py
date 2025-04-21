@@ -1,23 +1,37 @@
 import streamlit as st
 import pandas as pd
 
+# Data quality checks volgens DAMA
+
 def completeness_check(df, columns):
-    results = {}
-    for col in columns:
-        completeness = df[col].notnull().mean() * 100
-        results[col] = completeness
-    return results
+    return {col: df[col].notnull().mean() * 100 for col in columns}
 
 def uniqueness_check(df, columns):
-    results = {}
-    for col in columns:
-        uniqueness = df[col].is_unique
-        results[col] = uniqueness
-    return results
+    return {col: df[col].is_unique for col in columns}
+
+def accuracy_check(df, columns):
+    # Dummy check: simulatie dat alles accuraat is
+    return {col: 100.0 for col in columns}
+
+def consistency_check(df, columns):
+    # Dummy check: altijd consistent
+    return {col: True for col in columns}
+
+def validity_check(df, columns):
+    # Dummy check: alles geldig
+    return {col: 100.0 for col in columns}
+
+def timeliness_check(df, columns):
+    # Dummy check: 100% op tijd
+    return {col: 100.0 for col in columns}
 
 checks = {
     'Completeness': completeness_check,
-    'Uniqueness': uniqueness_check
+    'Uniqueness': uniqueness_check,
+    'Accuracy': accuracy_check,
+    'Consistency': consistency_check,
+    'Validity': validity_check,
+    'Timeliness': timeliness_check
 }
 
 st.title("🛒 Data Quality Marketplace Demo")
@@ -31,21 +45,20 @@ if uploaded_file:
     st.dataframe(df.head())
 
     selected_checks = st.multiselect("Selecteer Data Quality Checks", list(checks.keys()))
-
     columns = st.multiselect("Selecteer kolommen voor checks", df.columns)
 
     user_kpis = {}
     for check in selected_checks:
-        if check == 'Completeness':
+        if check in ['Completeness', 'Accuracy', 'Validity', 'Timeliness']:
             user_kpis[check] = st.slider(f"KPI voor {check} (%)", 0, 100, 90)
-        elif check == 'Uniqueness':
+        elif check in ['Uniqueness', 'Consistency']:
             user_kpis[check] = st.selectbox(f"KPI voor {check}", [True, False])
 
     if st.button("Voer checks uit"):
         for check_name in selected_checks:
             st.subheader(f"Resultaten voor {check_name}:")
             result = checks[check_name](df, columns)
-            
+
             for col, value in result.items():
                 kpi = user_kpis[check_name]
                 if isinstance(value, bool):
