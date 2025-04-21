@@ -1,5 +1,7 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
+from datetime import datetime
 
 # Data quality checks volgens DAMA
 
@@ -9,39 +11,52 @@ def completeness_check(df, columns):
 def uniqueness_check(df, columns):
     return {col: df[col].is_unique for col in columns}
 
-def accuracy_check(df, columns):
-    return {col: 100.0 for col in columns}
-
 def consistency_check(df, columns):
-    return {col: True for col in columns}
+    # Placeholder verbeterd: geeft True terug als kolomwaarden allemaal hetzelfde datatypes hebben
+    results = {}
+    for col in columns:
+        dtype_consistent = df[col].map(type).nunique() == 1
+        results[col] = dtype_consistent
+    return results
 
 def validity_check(df, columns):
     results = {}
     for col in columns:
-        valid_count = pd.to_numeric(df[col], errors='coerce').notnull().sum()
-        validity = (valid_count / len(df[col])) * 100
+        if any(keyword in col.lower() for keyword in ['id', 'leeftijd', 'aantal', 'prijs']):
+            valid_count = pd.to_numeric(df[col], errors='coerce').notnull().sum()
+            validity = (valid_count / len(df[col])) * 100
+        else:
+            valid_count = df[col].apply(lambda x: isinstance(x, str)).sum()
+            validity = (valid_count / len(df[col])) * 100
         results[col] = validity
     return results
 
-def timeliness_check(df, columns):
-    return {col: 100.0 for col in columns}
+def date_range_check(df, columns, start_date, end_date):
+    results = {}
+    for col in columns:
+        try:
+            col_parsed = pd.to_datetime(df[col], errors='coerce')
+            in_range = col_parsed.between(start_date, end_date).sum()
+            validity = (in_range / len(df[col])) * 100
+            results[col] = validity
+        except:
+            results[col] = 0.0
+    return results
 
 check_definitions = {
     'Completeness': "Mate waarin alle vereiste data aanwezig is (geen lege waarden).",
     'Uniqueness': "Data bevat geen duplicaten; elke waarde is uniek.",
-    'Accuracy': "Mate waarin data correct is en overeenkomt met de werkelijkheid.",
     'Consistency': "Data is logisch en structureel samenhangend binnen datasets.",
-    'Validity': "Data voldoet aan het verwachte formaat, type of regels (bijv. e-mailformaat).",
-    'Timeliness': "Data is actueel en beschikbaar op het moment dat het nodig is."
+    'Validity': "Data voldoet aan het verwachte formaat, type of regels (bijv. getallen in getalvelden).",
+    'Datumvalidatie': "Datumwaarden liggen binnen een opgegeven tijdsperiode."
 }
 
 checks = {
     'Completeness': completeness_check,
     'Uniqueness': uniqueness_check,
-    'Accuracy': accuracy_check,
     'Consistency': consistency_check,
     'Validity': validity_check,
-    'Timeliness': timeliness_check
+    'Datumvalidatie': date_range_check
 }
 
 st.title("🛒 Data Quality Marketplace Demo")
@@ -63,22 +78,32 @@ if uploaded_file:
 
     user_kpis = {}
     for check in selected_checks:
-        if check in ['Completeness', 'Accuracy', 'Validity', 'Timeliness']:
+        if check in ['Completeness', 'Validity', 'Datumvalidatie']:
             user_kpis[check] = st.slider(f"KPI voor {check} (%)", 0, 100, 90)
         elif check in ['Uniqueness', 'Consistency']:
             user_kpis[check] = st.selectbox(f"KPI voor {check}", [True, False])
 
+    start_date = end_date = None
+    if 'Datumvalidatie' in selected_checks:
+        st.markdown("### Datumvalidatie instellingen")
+        start_date = st.date_input("Startdatum", value=pd.to_datetime("2020-01-01"))
+        end_date = st.date_input("Einddatum", value=pd.to_datetime("2025-12-31"))
+
     if st.button("Voer checks uit"):
         for check_name in selected_checks:
             st.subheader(f"Resultaten voor {check_name}:")
-            result = checks[check_name](df, columns)
+
+            if check_name == 'Datumvalidatie':
+                result = checks[check_name](df, columns, start_date, end_date)
+            else:
+                result = checks[check_name](df, columns)
 
             for col, value in result.items():
                 kpi = user_kpis[check_name]
                 if isinstance(value, bool):
                     status = "✅ Geslaagd" if value == kpi else "❌ Niet geslaagd"
-                    value_display = "Uniek" if value else "Duplicaat"
-                    kpi_display = "Uniek" if kpi else "Duplicaat toegestaan"
+                    value_display = "Consistent" if value else "Inconsistent"
+                    kpi_display = "Consistent" if kpi else "Inconsistent toegestaan"
                     st.write(f"Kolom **{col}**: {value_display} (KPI: {kpi_display}) - {status}")
                 else:
                     status = "✅ Geslaagd" if value >= kpi else "❌ Niet geslaagd"
