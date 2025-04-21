@@ -16,7 +16,12 @@ def consistency_check(df, columns):
     return {col: True for col in columns}
 
 def validity_check(df, columns):
-    return {col: 100.0 for col in columns}
+    results = {}
+    for col in columns:
+        valid_count = pd.to_numeric(df[col], errors='coerce').notnull().sum()
+        validity = (valid_count / len(df[col])) * 100
+        results[col] = validity
+    return results
 
 def timeliness_check(df, columns):
     return {col: 100.0 for col in columns}
