@@ -12,7 +12,6 @@ def uniqueness_check(df, columns):
     return {col: df[col].is_unique for col in columns}
 
 def consistency_check(df, columns):
-    # Placeholder verbeterd: geeft True terug als kolomwaarden allemaal hetzelfde datatypes hebben
     results = {}
     for col in columns:
         dtype_consistent = df[col].map(type).nunique() == 1
@@ -21,13 +20,18 @@ def consistency_check(df, columns):
 
 def validity_check(df, columns):
     results = {}
+    numeric_keywords = ['id', 'leeftijd', 'aantal', 'prijs', 'nummer']
+    text_keywords = ['naam', 'adres', 'plaats', 'beschrijving']
     for col in columns:
-        if any(keyword in col.lower() for keyword in ['id', 'leeftijd', 'aantal', 'prijs']):
+        col_lower = col.lower()
+        if any(keyword.lower() in col_lower for keyword in numeric_keywords):
             valid_count = pd.to_numeric(df[col], errors='coerce').notnull().sum()
             validity = (valid_count / len(df[col])) * 100
-        else:
-            valid_count = df[col].apply(lambda x: isinstance(x, str)).sum()
+        elif any(keyword.lower() in col_lower for keyword in text_keywords):
+            valid_count = df[col].astype(str).apply(lambda x: isinstance(x, str) and x.strip() != '').sum()
             validity = (valid_count / len(df[col])) * 100
+        else:
+            validity = 100.0
         results[col] = validity
     return results
 
@@ -47,7 +51,7 @@ check_definitions = {
     'Completeness': "Mate waarin alle vereiste data aanwezig is (geen lege waarden).",
     'Uniqueness': "Data bevat geen duplicaten; elke waarde is uniek.",
     'Consistency': "Data is logisch en structureel samenhangend binnen datasets.",
-    'Validity': "Data voldoet aan het verwachte formaat, type of regels (bijv. getallen in getalvelden).",
+    'Validity': "Data voldoet aan het verwachte formaat, type of regels (bijv. getallen in getalvelden of tekst in tekstvelden).",
     'Datumvalidatie': "Datumwaarden liggen binnen een opgegeven tijdsperiode."
 }
 
