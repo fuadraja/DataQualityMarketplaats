@@ -25,6 +25,15 @@ def timeliness_check(df, columns):
     # Dummy check: 100% op tijd
     return {col: 100.0 for col in columns}
 
+check_definitions = {
+    'Completeness': "Mate waarin alle vereiste data aanwezig is (geen lege waarden).",
+    'Uniqueness': "Data bevat geen duplicaten; elke waarde is uniek.",
+    'Accuracy': "Mate waarin data correct is en overeenkomt met de werkelijkheid.",
+    'Consistency': "Data is logisch en structureel samenhangend binnen datasets.",
+    'Validity': "Data voldoet aan het verwachte formaat, type of regels (bijv. e-mailformaat).",
+    'Timeliness': "Data is actueel en beschikbaar op het moment dat het nodig is."
+}
+
 checks = {
     'Completeness': completeness_check,
     'Uniqueness': uniqueness_check,
@@ -45,6 +54,11 @@ if uploaded_file:
     st.dataframe(df.head())
 
     selected_checks = st.multiselect("Selecteer Data Quality Checks", list(checks.keys()))
+
+    # Toon definities van geselecteerde checks
+    for check in selected_checks:
+        st.markdown(f"**{check}**: {check_definitions[check]}")
+
     columns = st.multiselect("Selecteer kolommen voor checks", df.columns)
 
     user_kpis = {}
